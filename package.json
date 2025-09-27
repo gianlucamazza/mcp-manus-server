@@ -1,0 +1,105 @@
+{
+  "name": "mcp-manus-server",
+  "version": "1.0.0",
+  "description": "MCP Server with Manus.im integration following 2025 best practices",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:unit": "jest tests/unit",
+    "test:integration": "jest tests/integration",
+    "test:e2e": "playwright test",
+    "test:performance": "k6 run tests/performance/load-test.js",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.{ts,js,json}'",
+    "format:check": "prettier --check 'src/**/*.{ts,js,json}'",
+    "docker:build": "docker build -t mcp-manus-server .",
+    "docker:run": "docker run -p 3000:3000 mcp-manus-server",
+    "docker:security-scan": "trivy image mcp-manus-server",
+    "security:deps": "npm audit && snyk test",
+    "security:secrets": "trufflehog git file://. --only-verified",
+    "prepare": "husky install",
+    "docs:api": "swagger-jsdoc -d swaggerDef.js src/**/*.ts -o docs/api.json",
+    "docs:serve": "swagger-ui-serve docs/api.json"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "fastify": "^4.26.0",
+    "@fastify/cors": "^8.4.0",
+    "@fastify/helmet": "^11.1.1",
+    "zod": "^3.22.0",
+    "jsonwebtoken": "^9.0.2",
+    "axios": "^1.6.0",
+    "winston": "^3.11.0",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "express-rate-limit": "^7.1.0",
+    "prom-client": "^15.1.0",
+    "opentelemetry-auto": "^0.32.0",
+    "uuid": "^9.0.1",
+    "bcrypt": "^5.1.1",
+    "validator": "^13.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/cors": "^2.8.17",
+    "@types/bcrypt": "^5.0.2",
+    "@types/uuid": "^9.0.7",
+    "@types/validator": "^13.11.8",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "@playwright/test": "^1.40.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-security": "^2.1.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.11",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "prettier": "^3.2.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "supertest": "^6.3.4",
+    "@types/supertest": "^6.0.2"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "manus",
+    "typescript",
+    "docker",
+    "oauth",
+    "security"
+  ],
+  "author": "Gianluca Mazza",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run test && npm run typecheck"
+    }
+  }
+}

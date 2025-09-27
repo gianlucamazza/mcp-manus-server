@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  mcp-manus-server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: production
+    container_name: mcp-manus-server
+    restart: unless-stopped
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETUID
+      - SETGID
+    read_only: true
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      # OAuth Configuration (set these in your .env file)
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET:-}
+      - OAUTH_REDIRECT_URI=${OAUTH_REDIRECT_URI:-}
+      - OAUTH_AUTH_URL=${OAUTH_AUTH_URL:-}
+      - OAUTH_TOKEN_URL=${OAUTH_TOKEN_URL:-}
+      - OAUTH_SCOPES=${OAUTH_SCOPES:-read,write}
+      # Manus.im Configuration
+      - MANUS_API_KEY=${MANUS_API_KEY:-}
+      - MANUS_API_URL=${MANUS_API_URL:-https://api.manus.run}
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-change-this-in-production}
+    
+    # Volumes for persistence
+    volumes:
+      - logs_volume:/app/logs
+      # Temporary directories (writable)
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 10M
+          mode: 1777
+    
+    # Network settings
+    networks:
+      - mcp_network
+    
+    # Health check
+    healthcheck:
+      test: ["/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Add a reverse proxy for HTTP access
+  nginx-proxy:
+    image: nginx:1.25-alpine
+    container_name: mcp-nginx-proxy
+    restart: unless-stopped
+    profiles:
+      - http
+    
+    ports:
+      - "8080:80"
+    
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - logs_volume:/var/log/nginx
+    
+    networks:
+      - mcp_network
+    
+    depends_on:
+      mcp-manus-server:
+        condition: service_healthy
+    
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+    read_only: true
+    
+    tmpfs:
+      - /var/cache/nginx:rw,noexec,nosuid,nodev,size=50m
+      - /var/run:rw,noexec,nosuid,nodev,size=50m
+
+volumes:
+  logs_volume:
+    driver: local
+
+networks:
+  mcp_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

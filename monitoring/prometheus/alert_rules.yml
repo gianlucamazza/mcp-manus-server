@@ -1,0 +1,204 @@
+# Alert rules for MCP Manus Server
+groups:
+  - name: mcp_server_alerts
+    rules:
+      # High error rate alerts
+      - alert: HighHTTPErrorRate
+        expr: rate(mcp_server_http_requests_total{status_class="5xx"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: http
+        annotations:
+          summary: "High HTTP error rate detected"
+          description: "HTTP 5xx error rate is {{ $value }} req/sec for {{ $labels.instance }}"
+          
+      - alert: HighMCPErrorRate
+        expr: rate(mcp_server_mcp_errors_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: mcp
+        annotations:
+          summary: "High MCP error rate detected"
+          description: "MCP error rate is {{ $value }} req/sec for {{ $labels.instance }}"
+          
+      - alert: HighOAuthErrorRate
+        expr: rate(mcp_server_oauth_errors_total[5m]) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          component: oauth
+        annotations:
+          summary: "High OAuth error rate detected"
+          description: "OAuth error rate is {{ $value }} req/sec for {{ $labels.instance }}"
+
+      # Performance alerts
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(mcp_server_http_request_duration_seconds_bucket[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.instance }}"
+          
+      - alert: HighMemoryUsage
+        expr: mcp_server_process_resident_memory_bytes / 1024 / 1024 > 512
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}MB for {{ $labels.instance }}"
+          
+      - alert: HighCPUUsage
+        expr: rate(mcp_server_process_cpu_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}% for {{ $labels.instance }}"
+
+      # Availability alerts
+      - alert: ServiceDown
+        expr: up{job="mcp-manus-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: availability
+        annotations:
+          summary: "MCP Manus Server is down"
+          description: "{{ $labels.instance }} has been down for more than 1 minute"
+          
+      - alert: HealthCheckFailed
+        expr: mcp_server_health_check_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: health
+        annotations:
+          summary: "Health check failed"
+          description: "Health check {{ $labels.check_name }} failed for component {{ $labels.component }}"
+          
+      - alert: SecretsLoadFailed
+        expr: mcp_server_secrets_load_status == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "Secrets loading failed"
+          description: "Secret {{ $labels.secret_name }} failed to load from {{ $labels.source }}"
+
+      # Connection alerts
+      - alert: NoActiveMCPConnections
+        expr: mcp_server_connections_current == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: mcp
+        annotations:
+          summary: "No active MCP connections"
+          description: "No active MCP connections for {{ $labels.instance }} for 15 minutes"
+          
+      - alert: TooManyConnections
+        expr: mcp_server_connections_current > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: mcp
+        annotations:
+          summary: "Too many MCP connections"
+          description: "{{ $value }} active MCP connections for {{ $labels.instance }}"
+
+      # External service alerts
+      - alert: ManusAPIHighErrorRate
+        expr: rate(mcp_server_manus_api_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: external
+        annotations:
+          summary: "Manus.im API high error rate"
+          description: "Manus.im API error rate is {{ $value }} req/sec"
+          
+      - alert: ManusAPIHighLatency
+        expr: histogram_quantile(0.95, rate(mcp_server_manus_api_request_duration_seconds_bucket[5m])) > 5.0
+        for: 5m
+        labels:
+          severity: warning
+          component: external
+        annotations:
+          summary: "Manus.im API high latency"
+          description: "Manus.im API 95th percentile latency is {{ $value }}s"
+
+  - name: mcp_server_critical_alerts
+    rules:
+      # Critical business logic alerts
+      - alert: OAuthTokenGenerationFailed
+        expr: increase(mcp_server_oauth_errors_total{error_type="token_generation"}[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          component: oauth
+        annotations:
+          summary: "OAuth token generation failing"
+          description: "{{ $value }} OAuth token generation failures in 5 minutes"
+          
+      - alert: ConfigValidationFailed
+        expr: mcp_server_config_validation_status == 0
+        for: 0m
+        labels:
+          severity: critical
+          component: configuration
+        annotations:
+          summary: "Configuration validation failed"
+          description: "Configuration validation failed for environment {{ $labels.environment }}"
+          
+      - alert: DatabaseConnectionFailed
+        expr: mcp_server_health_check_status{check_name="database"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection failed"
+          description: "Database health check failed for {{ $labels.instance }}"
+
+  - name: mcp_server_capacity_alerts
+    rules:
+      # Capacity planning alerts
+      - alert: HighRequestVolume
+        expr: rate(mcp_server_http_requests_total[5m]) > 50
+        for: 10m
+        labels:
+          severity: info
+          component: capacity
+        annotations:
+          summary: "High request volume detected"
+          description: "Request rate is {{ $value }} req/sec, consider scaling"
+          
+      - alert: EventLoopLag
+        expr: mcp_server_nodejs_eventloop_lag_seconds > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "High event loop lag"
+          description: "Event loop lag is {{ $value }}s for {{ $labels.instance }}"
+          
+      - alert: GCPressure
+        expr: rate(mcp_server_nodejs_gc_duration_seconds_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: performance
+        annotations:
+          summary: "High garbage collection pressure"
+          description: "GC duration rate is {{ $value }}s/s for {{ $labels.instance }}"

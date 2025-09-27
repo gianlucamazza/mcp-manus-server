@@ -1,0 +1,130 @@
+# Prometheus configuration for MCP Manus Server
+global:
+  scrape_interval: 15s # Default scrape interval
+  evaluation_interval: 15s # How frequently to evaluate rules
+  external_labels:
+    cluster: 'mcp-manus'
+    replica: '1'
+
+# Rule files specifies a list of files from which rules are read
+rule_files:
+  - "alert_rules.yml"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Scrape configurations
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config
+  - job_name: 'mcp-manus-server'
+    static_configs:
+      - targets: ['mcp-manus-server:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    scheme: http
+    
+  # Self-monitoring of Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    
+  # cAdvisor for container metrics (if using Docker)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    
+  # Blackbox exporter for endpoint monitoring
+  - job_name: 'blackbox'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+        - http://mcp-manus-server:3000/health
+        - http://mcp-manus-server:3000/ready
+        - https://api.manus.run/health
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Application-specific scrape configs for different environments
+  - job_name: 'mcp-manus-staging'
+    static_configs:
+      - targets: ['staging-mcp-manus-server:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+    
+  - job_name: 'mcp-manus-production'
+    static_configs:
+      - targets: ['prod-mcp-manus-server:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+    scheme: https
+    tls_config:
+      insecure_skip_verify: false
+    basic_auth:
+      username: 'prometheus'
+      password: '${PROMETHEUS_PASSWORD}'
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 15d
+    retention.size: 10GB
+    
+# Remote write configuration (for long-term storage)
+remote_write:
+  - url: "http://cortex:9009/api/prom/push"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Recording rules for common queries
+recording_rules:
+  - name: mcp_server_rules
+    rules:
+      - record: mcp:http_request_rate_5m
+        expr: rate(mcp_server_http_requests_total[5m])
+        
+      - record: mcp:http_request_duration_p95_5m
+        expr: histogram_quantile(0.95, rate(mcp_server_http_request_duration_seconds_bucket[5m]))
+        
+      - record: mcp:mcp_request_rate_5m
+        expr: rate(mcp_server_mcp_requests_total[5m])
+        
+      - record: mcp:oauth_error_rate_5m
+        expr: rate(mcp_server_oauth_errors_total[5m])
+        
+      - record: mcp:manus_api_error_rate_5m
+        expr: rate(mcp_server_manus_api_errors_total[5m])
+
+# Global configuration for metric relabeling
+metric_relabel_configs:
+  # Drop high cardinality metrics in development
+  - source_labels: [__name__]
+    regex: 'mcp_server_http_request_duration_seconds_bucket'
+    target_label: __tmp_drop
+    replacement: 'true'
+  - source_labels: [__tmp_drop]
+    regex: 'true'
+    action: drop

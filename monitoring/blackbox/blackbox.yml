@@ -1,0 +1,81 @@
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: false
+      
+  http_post_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 201, 202]
+      method: POST
+      headers:
+        Content-Type: application/json
+      body: '{}'
+      
+  health_check:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      fail_if_body_not_matches_regexp:
+        - '"status":\s*"healthy"'
+      preferred_ip_protocol: "ip4"
+      
+  readiness_check:
+    prober: http
+    timeout: 10s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      fail_if_body_not_matches_regexp:
+        - '"status":\s*"ready"'
+      preferred_ip_protocol: "ip4"
+      
+  metrics_check:
+    prober: http
+    timeout: 15s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      fail_if_header_not_matches_regexp:
+        - header: "Content-Type"
+          regexp: "text/plain.*"
+      preferred_ip_protocol: "ip4"
+      
+  oauth_discovery:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      fail_if_body_not_matches_regexp:
+        - '"authorization_endpoint":'
+        - '"token_endpoint":'
+      headers:
+        Accept: application/json
+      preferred_ip_protocol: "ip4"
+      
+  tcp_connect:
+    prober: tcp
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      
+  icmp_ping:
+    prober: icmp
+    timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"
