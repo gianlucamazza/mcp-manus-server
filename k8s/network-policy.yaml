@@ -1,0 +1,181 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-manus-server
+      app.kubernetes.io/component: application
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow traffic from NGINX Ingress Controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000
+  # Allow traffic from Prometheus for metrics scraping
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+    ports:
+    - protocol: TCP
+      port: 3000
+  # Allow traffic from within the same namespace (service mesh)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: mcp-manus
+    ports:
+    - protocol: TCP
+      port: 3000
+  # Allow health checks from kubelet
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow HTTPS traffic to external APIs
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow HTTP traffic for OAuth callbacks and webhooks
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 80
+  # Allow connection to Redis (if in cluster)
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  # Allow connection to PostgreSQL (if in cluster)
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow connection to monitoring services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090  # Prometheus
+    - protocol: TCP
+      port: 3000  # Grafana
+    - protocol: TCP
+      port: 9093  # AlertManager
+
+---
+# Deny-all default policy for the namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/version: "1.0.0"
+    policy-type: default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+---
+# Allow DNS resolution for all pods in namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/version: "1.0.0"
+    policy-type: dns-allow
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+---
+# Allow monitoring traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/version: "1.0.0"
+    policy-type: monitoring-allow
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-manus-server
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow Prometheus scraping
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  # Allow sending metrics to monitoring services
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090
+    - protocol: TCP
+      port: 9093

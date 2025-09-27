@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-manus-config
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/version: "1.0.0"
+data:
+  # Server Configuration
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  PORT: "3000"
+  HOST: "0.0.0.0"
+  
+  # Base URLs (to be overridden per environment)
+  BASE_URL: "https://mcp-manus.example.com"
+  RESOURCE_IDENTIFIER: "https://api.manus.im/v1/"
+  
+  # OAuth 2.1 Configuration
+  OAUTH_REDIRECT_URI: "https://mcp-manus.example.com/oauth/callback"
+  OAUTH_AUTH_URL: "https://api.manus.im/oauth/authorize"
+  OAUTH_TOKEN_URL: "https://api.manus.im/oauth/token"
+  OAUTH_SCOPES: "read,write"
+  
+  # Manus.im API Configuration
+  MANUS_API_URL: "https://api.manus.run"
+  
+  # Security Configuration
+  BCRYPT_ROUNDS: "14"
+  
+  # Database Configuration
+  DATABASE_SSL: "true"
+  DATABASE_MAX_CONNECTIONS: "20"
+  REDIS_TLS: "true"
+  
+  # Monitoring Configuration
+  METRICS_ENABLED: "true"
+  METRICS_PORT: "3000"
+  
+  # Rate Limiting
+  RATE_LIMIT_REQUESTS: "30"
+  RATE_LIMIT_WINDOW_MS: "60000"
+  RATE_LIMIT_STORAGE: "redis"
+  
+  # CORS Configuration
+  CORS_CREDENTIALS: "true"
+  
+  # Security Headers
+  HSTS_MAX_AGE: "63072000"
+  HSTS_INCLUDE_SUBDOMAINS: "true"
+  HSTS_PRELOAD: "true"
+  CSP_DIRECTIVES: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';"
+  
+  # Performance
+  CLUSTER_MODE: "true"
+  WORKER_PROCESSES: "auto"
+  KEEP_ALIVE_TIMEOUT: "65000"
+  HEADERS_TIMEOUT: "66000"
+  
+  # Health Checks
+  HEALTH_CHECK_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30000"
+  READINESS_TIMEOUT: "10000"
+  LIVENESS_TIMEOUT: "5000"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-manus-env-staging
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/version: "1.0.0"
+    environment: staging
+data:
+  # Staging-specific overrides
+  NODE_ENV: "staging"
+  LOG_LEVEL: "debug"
+  BASE_URL: "https://staging-mcp-manus.example.com"
+  RESOURCE_IDENTIFIER: "https://staging-api.manus.im/v1/"
+  OAUTH_REDIRECT_URI: "https://staging-mcp-manus.example.com/oauth/callback"
+  OAUTH_AUTH_URL: "https://staging-api.manus.im/oauth/authorize"
+  OAUTH_TOKEN_URL: "https://staging-api.manus.im/oauth/token"
+  MANUS_API_URL: "https://staging-api.manus.run"
+  BCRYPT_ROUNDS: "12"
+  RATE_LIMIT_REQUESTS: "50"
+  CLUSTER_MODE: "false"
+  WORKER_PROCESSES: "2"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-manus-env-development
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: configuration
+    app.kubernetes.io/version: "1.0.0"
+    environment: development
+data:
+  # Development-specific overrides
+  NODE_ENV: "development"
+  LOG_LEVEL: "debug"
+  BASE_URL: "http://localhost:3000"
+  RESOURCE_IDENTIFIER: "https://dev-api.manus.im/v1/"
+  OAUTH_REDIRECT_URI: "http://localhost:3000/oauth/callback"
+  OAUTH_AUTH_URL: "https://dev-api.manus.im/oauth/authorize"
+  OAUTH_TOKEN_URL: "https://dev-api.manus.im/oauth/token"
+  MANUS_API_URL: "https://dev-api.manus.run"
+  BCRYPT_ROUNDS: "10"
+  RATE_LIMIT_REQUESTS: "100"
+  CORS_CREDENTIALS: "false"
+  CLUSTER_MODE: "false"
+  WORKER_PROCESSES: "1"
+  HSTS_MAX_AGE: "0"
+  HSTS_INCLUDE_SUBDOMAINS: "false"
+  HSTS_PRELOAD: "false"

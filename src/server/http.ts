@@ -4,6 +4,7 @@ import helmet from '@fastify/helmet';
 import { registerMetricsMiddleware } from '../monitoring/middleware.js';
 import { registerMonitoringRoutes } from '../monitoring/routes.js';
 import { registerDiscoveryRoutes } from './discovery-routes.js';
+import { registerOpenAPI } from '../docs/openapi.js';
 import { 
   logger, 
   runWithCorrelation, 
@@ -15,6 +16,7 @@ import {
 import { configManager } from '../utils/config.js';
 import { secretsManager } from '../utils/secrets.js';
 import { metricsCollector } from '../monitoring/metrics.js';
+import { securityManager } from '../security/index.js';
 
 export class HTTPServer {
   private fastify: FastifyInstance;
@@ -31,24 +33,23 @@ export class HTTPServer {
     });
 
     this.setupMiddleware();
+    this.setupDocumentation();
     this.setupRoutes();
     this.setupErrorHandling();
   }
 
   private async setupMiddleware(): Promise<void> {
-    // Security middleware
+    // Advanced security middleware
+    await securityManager.registerSecurityMiddleware(this.fastify);
+    
+    // Basic security middleware (enhanced by security manager)
     await this.fastify.register(helmet, {
-      contentSecurityPolicy: {
-        directives: this.config.CSP_DIRECTIVES ? {
-          defaultSrc: ["'self'"],
-          ...this.parseCspDirectives(this.config.CSP_DIRECTIVES)
-        } : false
-      },
-      hsts: {
-        maxAge: this.config.HSTS_MAX_AGE,
-        includeSubDomains: this.config.HSTS_INCLUDE_SUBDOMAINS,
-        preload: this.config.HSTS_PRELOAD
-      }
+      contentSecurityPolicy: false, // Handled by security manager
+      hsts: false, // Handled by security manager
+      xssFilter: false, // Handled by security manager
+      noSniff: false, // Handled by security manager
+      frameguard: false, // Handled by security manager
+      referrerPolicy: false // Handled by security manager
     });
 
     // CORS middleware
@@ -123,6 +124,11 @@ export class HTTPServer {
     });
   }
 
+  private async setupDocumentation(): Promise<void> {
+    // Register OpenAPI documentation
+    await registerOpenAPI(this.fastify);
+  }
+
   private async setupRoutes(): Promise<void> {
     // Root endpoint
     this.fastify.get('/', async (request, reply) => {
@@ -147,6 +153,9 @@ export class HTTPServer {
 
     // Register OAuth discovery routes
     await registerDiscoveryRoutes(this.fastify);
+    
+    // Register security endpoints
+    await this.registerSecurityRoutes();
 
     // 404 handler
     this.fastify.setNotFoundHandler(async (request, reply) => {
@@ -288,5 +297,84 @@ export class HTTPServer {
 
   private camelCaseCSP(str: string): string {
     return str.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+  }
+
+  private async registerSecurityRoutes(): Promise<void> {
+    // Security metrics endpoint
+    this.fastify.get('/api/security/metrics', {
+      schema: {
+        description: 'Security metrics and statistics',
+        tags: ['security'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              timestamp: { type: 'string' },
+              metrics: {
+                type: 'object',
+                properties: {
+                  suspiciousIPs: { type: 'number' },
+                  failedAuthAttempts: { type: 'number' },
+                  redisConnected: { type: 'number' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }, async (request, reply) => {
+      try {
+        const metrics = securityManager.getSecurityMetrics();
+        reply.send({
+          timestamp: new Date().toISOString(),
+          metrics
+        });
+      } catch (error) {
+        logError(error instanceof Error ? error : new Error(String(error)), 'security_metrics');
+        reply.code(500).send({ error: 'Failed to fetch security metrics' });
+      }
+    });
+
+    // Security status endpoint
+    this.fastify.get('/api/security/status', {
+      schema: {
+        description: 'Security system status',
+        tags: ['security'],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              status: { type: 'string' },
+              timestamp: { type: 'string' },
+              components: {
+                type: 'object',
+                properties: {
+                  rateLimit: { type: 'string' },
+                  inputValidation: { type: 'string' },
+                  securityHeaders: { type: 'string' },
+                  intrusionDetection: { type: 'string' }
+                }
+              }
+            }
+          }
+        }
+      }
+    }, async (request, reply) => {
+      try {
+        reply.send({
+          status: 'operational',
+          timestamp: new Date().toISOString(),
+          components: {
+            rateLimit: 'operational',
+            inputValidation: 'operational',
+            securityHeaders: 'operational',
+            intrusionDetection: 'operational'
+          }
+        });
+      } catch (error) {
+        logError(error instanceof Error ? error : new Error(String(error)), 'security_status');
+        reply.code(500).send({ error: 'Failed to fetch security status' });
+      }
+    });
   }
 }

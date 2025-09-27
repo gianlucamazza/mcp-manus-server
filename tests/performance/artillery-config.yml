@@ -1,0 +1,172 @@
+# Artillery.js Performance Testing Configuration
+# MCP Manus Server - Enterprise Load Testing
+
+config:
+  target: 'http://localhost:3000'
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: 'Warm-up'
+    # Ramp-up phase  
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 50
+      name: 'Ramp-up'
+    # Sustained load phase
+    - duration: 300
+      arrivalRate: 50
+      name: 'Sustained load'
+    # Peak load phase
+    - duration: 120
+      arrivalRate: 100
+      name: 'Peak load'
+    # Cool-down phase
+    - duration: 60
+      arrivalRate: 10
+      name: 'Cool-down'
+  
+  # Performance thresholds
+  ensure:
+    p95: 500  # 95th percentile under 500ms
+    p99: 1000 # 99th percentile under 1000ms
+    maxErrorRate: 1 # Error rate under 1%
+  
+  # Environment variables
+  variables:
+    correlationIdPrefix: 'artillery-test'
+    testClientId: 'artillery-client'
+  
+  # HTTP configuration
+  http:
+    timeout: 30
+    pool: 50
+    maxSockets: 50
+  
+  # Artillery plugins
+  plugins:
+    - name: 'artillery-plugin-prometheus'
+      options:
+        pushGatewayUrl: 'http://localhost:9091'
+        labels:
+          testType: 'artillery'
+          environment: 'test'
+    - name: 'artillery-plugin-metrics-by-endpoint'
+  
+  # Test data
+  payload:
+    path: './test-data.json'
+
+# Test scenarios
+scenarios:
+  # Basic health check scenario (40% of traffic)
+  - name: 'Health Check'
+    weight: 40
+    flow:
+      - get:
+          url: '/health'
+          headers:
+            X-Correlation-ID: '{{ correlationIdPrefix }}-health-{{ $randomString() }}'
+            X-Request-ID: 'req-{{ $timestamp() }}-{{ $randomString() }}'
+          capture:
+            - json: '$.status'
+              as: 'healthStatus'
+          expect:
+            - statusCode: 200
+            - hasProperty: 'status'
+            - equals:
+              - '{{ healthStatus }}'
+              - 'healthy'
+
+  # Readiness check scenario (20% of traffic)
+  - name: 'Readiness Check'
+    weight: 20
+    flow:
+      - get:
+          url: '/ready'
+          headers:
+            X-Correlation-ID: '{{ correlationIdPrefix }}-ready-{{ $randomString() }}'
+          expect:
+            - statusCode: 200
+            - hasProperty: 'status'
+
+  # OAuth discovery scenario (15% of traffic)
+  - name: 'OAuth Discovery'
+    weight: 15
+    flow:
+      - get:
+          url: '/.well-known/oauth-authorization-server'
+          headers:
+            X-Correlation-ID: '{{ correlationIdPrefix }}-oauth-{{ $randomString() }}'
+            Accept: 'application/json'
+          capture:
+            - json: '$.authorization_endpoint'
+              as: 'authEndpoint'
+            - json: '$.token_endpoint' 
+              as: 'tokenEndpoint'
+          expect:
+            - statusCode: 200
+            - hasProperty: 'authorization_endpoint'
+            - hasProperty: 'token_endpoint'
+
+  # Metrics endpoint scenario (10% of traffic)
+  - name: 'Metrics Collection'
+    weight: 10
+    flow:
+      - get:
+          url: '/metrics'
+          headers:
+            X-Correlation-ID: '{{ correlationIdPrefix }}-metrics-{{ $randomString() }}'
+            Accept: 'text/plain'
+          expect:
+            - statusCode: 200
+            - contentType: 'text/plain'
+
+  # API root endpoint scenario (10% of traffic)
+  - name: 'API Information'
+    weight: 10
+    flow:
+      - get:
+          url: '/'
+          headers:
+            X-Correlation-ID: '{{ correlationIdPrefix }}-root-{{ $randomString() }}'
+          capture:
+            - json: '$.name'
+              as: 'serverName'
+            - json: '$.version'
+              as: 'serverVersion'
+          expect:
+            - statusCode: 200
+            - equals:
+              - '{{ serverName }}'
+              - 'MCP Manus Server'
+
+  # Security status scenario (5% of traffic)
+  - name: 'Security Status'
+    weight: 5
+    flow:
+      - get:
+          url: '/api/security/status'
+          headers:
+            X-Correlation-ID: '{{ correlationIdPrefix }}-security-{{ $randomString() }}'
+          expect:
+            - statusCode: 200
+            - hasProperty: 'status'
+            - hasProperty: 'components'
+
+# Before/After hooks
+before:
+  flow:
+    - log: 'Starting MCP Manus Server performance test with Artillery'
+    - get:
+        url: '/health'
+        expect:
+          - statusCode: 200
+
+after:
+  flow:
+    - log: 'Performance test completed'
+    - get:
+        url: '/health'
+        expect:
+          - statusCode: 200

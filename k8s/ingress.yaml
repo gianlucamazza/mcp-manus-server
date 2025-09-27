@@ -1,0 +1,149 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    # NGINX Ingress Controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+    nginx.ingress.kubernetes.io/ssl-ciphers: "ECDHE-RSA-AES128-GCM-SHA256,ECDHE-RSA-AES256-GCM-SHA384,ECDHE-RSA-AES128-SHA256,ECDHE-RSA-AES256-SHA384"
+    nginx.ingress.kubernetes.io/ssl-prefer-server-ciphers: "true"
+    
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+      more_set_headers "Permissions-Policy: geolocation=(), camera=(), microphone=()";
+    
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/rate-limit-connections: "10"
+    
+    # CORS
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://mcp-manus.example.com,https://app.manus.im"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type,Authorization,X-Requested-With,X-Correlation-ID"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    
+    # Performance
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    
+    # Health checks
+    nginx.ingress.kubernetes.io/upstream-fail-timeout: "10"
+    nginx.ingress.kubernetes.io/upstream-max-fails: "3"
+    
+    # Certificate management (if using cert-manager)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/acme-challenge-type: "http01"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - mcp-manus.example.com
+    secretName: mcp-manus-tls
+  rules:
+  - host: mcp-manus.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mcp-manus-server
+            port:
+              number: 80
+      - path: /metrics
+        pathType: Prefix
+        backend:
+          service:
+            name: mcp-manus-server
+            port:
+              number: 3000
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-manus-server-staging
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/version: "1.0.0"
+    environment: staging
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "50"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - staging-mcp-manus.example.com
+    secretName: mcp-manus-staging-tls
+  rules:
+  - host: staging-mcp-manus.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mcp-manus-server-staging
+            port:
+              number: 80
+
+---
+# Internal ingress for monitoring access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcp-manus-monitoring
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: monitoring-ingress
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: monitoring-auth
+    nginx.ingress.kubernetes.io/auth-realm: "MCP Manus Monitoring"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: monitoring-mcp-manus.internal
+    http:
+      paths:
+      - path: /metrics
+        pathType: Prefix
+        backend:
+          service:
+            name: mcp-manus-server
+            port:
+              number: 3000
+      - path: /api/security
+        pathType: Prefix
+        backend:
+          service:
+            name: mcp-manus-server
+            port:
+              number: 80

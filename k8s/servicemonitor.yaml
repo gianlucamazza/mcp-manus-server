@@ -1,0 +1,185 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: service-monitor
+    app.kubernetes.io/version: "1.0.0"
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-manus-server
+      app.kubernetes.io/component: service
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    # Add cluster and namespace labels
+    - sourceLabels: [__name__]
+      targetLabel: cluster
+      replacement: mcp-manus-cluster
+    - sourceLabels: [__name__]
+      targetLabel: namespace
+      replacement: mcp-manus
+    # Relabel high cardinality metrics
+    - sourceLabels: [__name__]
+      regex: 'mcp_server_http_request_duration_seconds_bucket'
+      targetLabel: __tmp_bucket
+      replacement: 'true'
+    relabelings:
+    # Add service label
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service
+    # Add pod label
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod
+    # Add node label
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: prometheus-rule
+    app.kubernetes.io/version: "1.0.0"
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: mcp-manus-server.rules
+    rules:
+    # High-level availability SLO
+    - record: mcp:availability_slo
+      expr: |
+        (
+          sum(rate(mcp_server_http_requests_total{status_class!="5xx"}[5m])) /
+          sum(rate(mcp_server_http_requests_total[5m]))
+        ) * 100
+      labels:
+        slo_type: availability
+        
+    # Response time SLO
+    - record: mcp:response_time_slo
+      expr: |
+        histogram_quantile(0.95, 
+          sum(rate(mcp_server_http_request_duration_seconds_bucket[5m])) by (le)
+        ) * 1000
+      labels:
+        slo_type: response_time
+        percentile: "95"
+        
+    # Error budget burn rate
+    - record: mcp:error_budget_burn_rate
+      expr: |
+        (
+          sum(rate(mcp_server_http_requests_total{status_class="5xx"}[5m])) /
+          sum(rate(mcp_server_http_requests_total[5m]))
+        ) * 100
+        
+  - name: mcp-manus-server.alerts
+    rules:
+    # Critical SLO breach
+    - alert: MCPServerAvailabilitySLOBreach
+      expr: mcp:availability_slo < 99.9
+      for: 2m
+      labels:
+        severity: critical
+        component: slo
+      annotations:
+        summary: "MCP Server availability SLO breach"
+        description: "Availability is {{ $value }}% (target: 99.9%)"
+        
+    - alert: MCPServerResponseTimeSLOBreach
+      expr: mcp:response_time_slo > 500
+      for: 5m
+      labels:
+        severity: warning
+        component: slo
+      annotations:
+        summary: "MCP Server response time SLO breach"
+        description: "95th percentile response time is {{ $value }}ms (target: <500ms)"
+        
+    # Kubernetes-specific alerts
+    - alert: MCPServerPodCrashLooping
+      expr: |
+        rate(kube_pod_container_status_restarts_total{
+          namespace="mcp-manus",
+          container="mcp-manus-server"
+        }[5m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+        component: kubernetes
+      annotations:
+        summary: "MCP Server pod crash looping"
+        description: "Pod {{ $labels.pod }} is crash looping"
+        
+    - alert: MCPServerPodNotReady
+      expr: |
+        kube_pod_status_ready{
+          namespace="mcp-manus",
+          condition="false"
+        } == 1
+      for: 10m
+      labels:
+        severity: warning
+        component: kubernetes
+      annotations:
+        summary: "MCP Server pod not ready"
+        description: "Pod {{ $labels.pod }} has been not ready for 10 minutes"
+        
+    # HPA alerts
+    - alert: MCPServerHPAMaxReplicas
+      expr: |
+        kube_horizontalpodautoscaler_status_current_replicas{
+          namespace="mcp-manus"
+        } >= kube_horizontalpodautoscaler_spec_max_replicas{
+          namespace="mcp-manus"
+        }
+      for: 15m
+      labels:
+        severity: warning
+        component: scaling
+      annotations:
+        summary: "MCP Server HPA at maximum replicas"
+        description: "HPA has been at maximum replicas for 15 minutes"
+        
+    # Resource usage alerts
+    - alert: MCPServerHighMemoryUsage
+      expr: |
+        container_memory_working_set_bytes{
+          namespace="mcp-manus",
+          container="mcp-manus-server"
+        } / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: resources
+      annotations:
+        summary: "MCP Server high memory usage"
+        description: "Pod {{ $labels.pod }} memory usage is above 90%"
+        
+    - alert: MCPServerHighCPUUsage
+      expr: |
+        rate(container_cpu_usage_seconds_total{
+          namespace="mcp-manus",
+          container="mcp-manus-server"
+        }[5m]) / container_spec_cpu_quota * container_spec_cpu_period > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        component: resources
+      annotations:
+        summary: "MCP Server high CPU usage"
+        description: "Pod {{ $labels.pod }} CPU usage is above 90%"

@@ -1,0 +1,34 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: pod-disruption-budget
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-manus-server
+      app.kubernetes.io/component: application
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: mcp-manus-server-staging
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: pod-disruption-budget
+    app.kubernetes.io/version: "1.0.0"
+    environment: staging
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mcp-manus-server
+      app.kubernetes.io/component: application
+      environment: staging

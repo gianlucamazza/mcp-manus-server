@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-manus
+  labels:
+    name: mcp-manus
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: kubernetes
+    environment: production
+  annotations:
+    description: "MCP Manus Server namespace for production deployment"
+    contact: "info@gianlucamazza.it"
+spec: {}

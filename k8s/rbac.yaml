@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: service-account
+    app.kubernetes.io/version: "1.0.0"
+automountServiceAccountToken: true
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: role
+    app.kubernetes.io/version: "1.0.0"
+rules:
+# Allow reading ConfigMaps for configuration
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Allow reading Secrets for credentials
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+# Allow reading own Pod information
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+  resourceNames: ["mcp-manus-server-*"]
+# Allow reading Services for service discovery
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+# Allow reading Endpoints for load balancing
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list"]
+# Allow creating Events for logging
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mcp-manus-server
+  namespace: mcp-manus
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: role-binding
+    app.kubernetes.io/version: "1.0.0"
+subjects:
+- kind: ServiceAccount
+  name: mcp-manus-server
+  namespace: mcp-manus
+roleRef:
+  kind: Role
+  name: mcp-manus-server
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ClusterRole for monitoring and metrics collection
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mcp-manus-monitoring
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: cluster-role
+    app.kubernetes.io/version: "1.0.0"
+rules:
+# Allow reading Node information for system metrics
+- apiGroups: [""]
+  resources: ["nodes", "nodes/metrics"]
+  verbs: ["get", "list"]
+# Allow reading Pod metrics across all namespaces
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+# Allow reading Service metrics
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mcp-manus-monitoring
+  labels:
+    app.kubernetes.io/name: mcp-manus-server
+    app.kubernetes.io/component: cluster-role-binding
+    app.kubernetes.io/version: "1.0.0"
+subjects:
+- kind: ServiceAccount
+  name: mcp-manus-server
+  namespace: mcp-manus
+roleRef:
+  kind: ClusterRole
+  name: mcp-manus-monitoring
+  apiGroup: rbac.authorization.k8s.io
