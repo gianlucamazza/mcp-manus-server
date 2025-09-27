@@ -1,0 +1,62 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-push quality gates..."
+
+# Check if we're pushing to main/master
+protected_branch='main'
+current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+
+if [ $protected_branch = $current_branch ]; then
+  echo "🛡️  Direct push to main branch detected!"
+  echo "Running comprehensive checks..."
+  
+  # Run all tests
+  echo "🧪 Running all tests..."
+  npm run test
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Tests failed. Push aborted."
+    exit 1
+  fi
+  
+  # Type checking
+  echo "🔍 Running type checks..."
+  npm run typecheck
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Type checking failed. Push aborted."
+    exit 1
+  fi
+  
+  # Security checks
+  echo "🔒 Running security checks..."
+  npm run security:deps
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Security checks failed. Push aborted."
+    exit 1
+  fi
+  
+  # Build check
+  echo "🏗️  Running build check..."
+  npm run build
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Build failed. Push aborted."
+    exit 1
+  fi
+  
+  echo "✅ All pre-push checks passed for main branch!"
+else
+  echo "🚀 Pushing to feature branch: $current_branch"
+  echo "🧪 Running quick tests..."
+  npm run test:unit
+  
+  if [ $? -ne 0 ]; then
+    echo "❌ Unit tests failed. Push aborted."
+    exit 1
+  fi
+  
+  echo "✅ Feature branch checks passed!"
+fi

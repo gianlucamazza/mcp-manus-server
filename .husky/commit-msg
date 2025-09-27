@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Validating commit message..."
+
+# Read the commit message
+commit_message=$(cat "$1")
+
+# Check conventional commit format
+conventional_pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,50}"
+
+if ! echo "$commit_message" | grep -qE "$conventional_pattern"; then
+  echo "❌ Commit message does not follow conventional commit format!"
+  echo ""
+  echo "Format: <type>[optional scope]: <description>"
+  echo ""
+  echo "Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
+  echo ""
+  echo "Examples:"
+  echo "  feat: add user authentication"
+  echo "  fix(api): resolve cors issue"
+  echo "  docs: update README with setup instructions"
+  echo ""
+  echo "Your message: $commit_message"
+  exit 1
+fi
+
+# Check for certain keywords that might indicate incomplete work
+forbidden_patterns=("TODO" "FIXME" "XXX" "HACK" "DEBUG" "console.log")
+
+for pattern in "${forbidden_patterns[@]}"; do
+  if echo "$commit_message" | grep -qi "$pattern"; then
+    echo "⚠️  Warning: Commit message contains '$pattern' - make sure this is intentional"
+    echo "Your message: $commit_message"
+    # Don't exit, just warn
+  fi
+done
+
+echo "✅ Commit message validation passed!"

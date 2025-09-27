@@ -26,7 +26,12 @@
     "security:secrets": "trufflehog git file://. --only-verified",
     "prepare": "husky install",
     "docs:api": "swagger-jsdoc -d swaggerDef.js src/**/*.ts -o docs/api.json",
-    "docs:serve": "swagger-ui-serve docs/api.json"
+    "docs:serve": "swagger-ui-serve docs/api.json",
+    "quality:check": "./scripts/quality-check.sh",
+    "quality:fix": "npm run lint:fix && npm run format",
+    "quality:setup": "./scripts/setup-quality-gates.sh",
+    "hooks:install": "husky install",
+    "hooks:test": "echo 'test: validate hooks' | .husky/commit-msg /dev/stdin"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
@@ -69,7 +74,10 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.0",
     "supertest": "^6.3.4",
-    "@types/supertest": "^6.0.2"
+    "@types/supertest": "^6.0.2",
+    "k6": "^0.47.0",
+    "@commitlint/cli": "^18.4.0",
+    "@commitlint/config-conventional": "^18.4.0"
   },
   "keywords": [
     "mcp",
@@ -90,10 +98,18 @@
   "lint-staged": {
     "*.{ts,js}": [
       "eslint --fix",
-      "prettier --write"
+      "prettier --write",
+      "git add"
     ],
-    "*.{json,md}": [
-      "prettier --write"
+    "*.{json,md,yml,yaml}": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.{ts,tsx}": [
+      "bash -c 'npm run typecheck'"
+    ],
+    "src/**/*.{ts,js}": [
+      "jest --bail --findRelatedTests --passWithNoTests"
     ]
   },
   "husky": {
