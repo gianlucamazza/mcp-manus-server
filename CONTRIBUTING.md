@@ -14,7 +14,7 @@ Thank you for your interest in contributing to the MCP Manus Server! This docume
 
 ## Code of Conduct
 
-This project adheres to a code of conduct that we expect all contributors to follow. Please be respectful and constructive in all interactions.
+This project adheres to the Contributor Covenant Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [INSERT CONTACT METHOD]. For more details, see our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Getting Started
 
