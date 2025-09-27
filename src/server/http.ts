@@ -4,7 +4,14 @@ import helmet from '@fastify/helmet';
 import { registerMetricsMiddleware } from '../monitoring/middleware.js';
 import { registerMonitoringRoutes } from '../monitoring/routes.js';
 import { registerDiscoveryRoutes } from './discovery-routes.js';
-import { logger } from '../utils/logger.js';
+import { 
+  logger, 
+  runWithCorrelation, 
+  generateCorrelationId, 
+  generateRequestId,
+  logHTTPRequest,
+  logError 
+} from '../utils/logger.js';
 import { configManager } from '../utils/config.js';
 import { secretsManager } from '../utils/secrets.js';
 import { metricsCollector } from '../monitoring/metrics.js';
@@ -59,27 +66,59 @@ export class HTTPServer {
       normalizeRoutes: true
     });
 
-    // Request ID middleware
+    // Enhanced correlation middleware
     this.fastify.addHook('onRequest', async (request, reply) => {
-      const requestId = request.headers['x-request-id'] as string || 
-                        this.generateRequestId();
+      const correlationId = request.headers['x-correlation-id'] as string || generateCorrelationId();
+      const requestId = request.headers['x-request-id'] as string || generateRequestId();
+      const sessionId = request.headers['x-session-id'] as string;
+      const traceId = request.headers['x-trace-id'] as string;
       
-      (request as any).requestId = requestId;
+      // Set correlation context for the request
+      runWithCorrelation({
+        correlationId,
+        requestId,
+        sessionId,
+        traceId
+      }, () => {
+        (request as any).correlationId = correlationId;
+        (request as any).requestId = requestId;
+        (request as any).sessionId = sessionId;
+        (request as any).traceId = traceId;
+      });
+      
+      // Set response headers
+      reply.header('x-correlation-id', correlationId);
       reply.header('x-request-id', requestId);
+      if (traceId) reply.header('x-trace-id', traceId);
     });
 
-    // Logging middleware
+    // Enhanced logging middleware with correlation
     this.fastify.addHook('onResponse', async (request, reply) => {
       const responseTime = reply.getResponseTime();
+      const correlationId = (request as any).correlationId;
+      const requestId = (request as any).requestId;
+      const sessionId = (request as any).sessionId;
+      const traceId = (request as any).traceId;
       
-      logger.info('HTTP Request', {
-        requestId: (request as any).requestId,
-        method: request.method,
-        url: request.url,
-        statusCode: reply.statusCode,
-        responseTime: `${responseTime}ms`,
-        userAgent: request.headers['user-agent'],
-        ip: request.ip
+      // Log with correlation context
+      runWithCorrelation({
+        correlationId,
+        requestId,
+        sessionId,
+        traceId
+      }, () => {
+        logHTTPRequest(
+          request.method,
+          request.url,
+          reply.statusCode,
+          responseTime,
+          {
+            userAgent: request.headers['user-agent'],
+            ip: request.ip,
+            contentType: reply.getHeader('content-type'),
+            contentLength: reply.getHeader('content-length')
+          }
+        );
       });
     });
   }
@@ -121,15 +160,25 @@ export class HTTPServer {
 
   private setupErrorHandling(): void {
     this.fastify.setErrorHandler(async (error, request, reply) => {
-      const requestId = (request as any).requestId || 'unknown';
+      const correlationId = (request as any).correlationId;
+      const requestId = (request as any).requestId;
+      const sessionId = (request as any).sessionId;
+      const traceId = (request as any).traceId;
       
-      logger.error('HTTP Error', {
+      // Log error with correlation context
+      runWithCorrelation({
+        correlationId,
         requestId,
-        error: error.message,
-        stack: error.stack,
-        method: request.method,
-        url: request.url,
-        statusCode: error.statusCode || 500
+        sessionId,
+        traceId
+      }, () => {
+        logError(error, 'http_request', {
+          method: request.method,
+          url: request.url,
+          statusCode: error.statusCode || 500,
+          userAgent: request.headers['user-agent'],
+          ip: request.ip
+        });
       });
 
       // Don't expose internal errors in production
@@ -141,6 +190,7 @@ export class HTTPServer {
           stack: error.stack,
           details: error 
         }),
+        correlationId,
         requestId,
         timestamp: new Date().toISOString()
       });

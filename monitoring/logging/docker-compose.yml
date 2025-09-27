@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # Elasticsearch for log storage
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: mcp-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - logging
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kibana for log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: mcp-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - xpack.security.enabled=false
+    ports:
+      - "5601:5601"
+    networks:
+      - logging
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Fluent Bit for log collection and processing
+  fluent-bit:
+    image: fluent/fluent-bit:2.2.0
+    container_name: mcp-fluent-bit
+    volumes:
+      - ./fluentbit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./parsers.conf:/fluent-bit/etc/parsers.conf
+      - ../../logs:/app/logs:ro
+      - fluent_bit_storage:/tmp/flb-storage
+    ports:
+      - "24224:24224"  # Forward input
+      - "2020:2020"    # HTTP monitoring
+      - "2021:2021"    # Prometheus exporter
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - ELASTICSEARCH_USER=${ELASTICSEARCH_USER:-}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-}
+      - NODE_ENV=${NODE_ENV:-development}
+    networks:
+      - logging
+      - app
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # Logstash (alternative to Fluent Bit)
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: mcp-logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ../../logs:/app/logs:ro
+    ports:
+      - "5044:5044"  # Beats input
+      - "9600:9600"  # Monitoring API
+    environment:
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+    networks:
+      - logging
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    profiles:
+      - logstash
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:1.48
+    container_name: mcp-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=elasticsearch
+      - ES_SERVER_URLS=http://elasticsearch:9200
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # HTTP collector
+      - "14250:14250"  # gRPC collector
+      - "6831:6831/udp"  # UDP agent
+    networks:
+      - logging
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # Log rotation and cleanup
+  log-rotator:
+    image: alpine:3.18
+    container_name: mcp-log-rotator
+    volumes:
+      - ../../logs:/app/logs
+    command: >
+      sh -c "
+        while true; do
+          find /app/logs -name '*.log' -type f -mtime +7 -exec rm {} \;
+          find /app/logs -name '*.log.*' -type f -mtime +30 -exec rm {} \;
+          sleep 3600
+        done
+      "
+    networks:
+      - logging
+    profiles:
+      - cleanup
+
+volumes:
+  elasticsearch_data:
+    driver: local
+  fluent_bit_storage:
+    driver: local
+
+networks:
+  logging:
+    driver: bridge
+    name: mcp-logging
+  app:
+    external: true
+    name: mcp-app

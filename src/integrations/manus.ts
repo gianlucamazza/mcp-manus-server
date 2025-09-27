@@ -8,7 +8,13 @@ import {
   ManusTaskSchema,
   ManusApiResponseSchema 
 } from '../types/index.js';
-import { logger } from '../utils/logger.js';
+import { 
+  logger, 
+  logManusAPICall, 
+  logError, 
+  runWithCorrelation, 
+  generateCorrelationId 
+} from '../utils/logger.js';
 
 export class ManusIntegration {
   private apiClient: AxiosInstance;

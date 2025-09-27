@@ -8,7 +8,15 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { MCPServerConfig, SecurityContext } from '../types/index.js';
-import { logger, logMCPOperation, logSecurityEvent } from '../utils/logger.js';
+import { 
+  logger, 
+  logMCPOperation, 
+  logSecurityEvent, 
+  runWithCorrelation, 
+  generateCorrelationId, 
+  generateTraceId,
+  logError 
+} from '../utils/logger.js';
 import { ToolManager } from '../tools/manager.js';
 import { ResourceManager } from '../resources/manager.js';
 import { AuthManager } from '../auth/manager.js';
@@ -52,47 +60,76 @@ export class MCPManusServer {
       this.server.setRequestHandler(ListToolsRequestSchema, async () => {
         const startTime = Date.now();
         
-        try {
-          logMCPOperation('list_tools', {});
-          const result = {
-            tools: this.toolManager.listTools()
-          };
-          
-          metricsCollector.recordMcpRequest('list_tools', 'tools', 'success', (Date.now() - startTime) / 1000);
-          return result;
-        } catch (error) {
-          metricsCollector.recordMcpError('list_tools_error', 'LIST_TOOLS_FAILED', 'list_tools');
-          throw error;
-        }
+        return runWithCorrelation({
+          correlationId: generateCorrelationId(),
+          traceId: generateTraceId()
+        }, () => {
+          try {
+            logMCPOperation('list_tools', {}, { operationId: 'mcp_list_tools' });
+            const result = {
+              tools: this.toolManager.listTools()
+            };
+            
+            const duration = (Date.now() - startTime) / 1000;
+            metricsCollector.recordMcpRequest('list_tools', 'tools', 'success', duration);
+            
+            logMCPOperation('list_tools', result, { 
+              operationId: 'mcp_list_tools',
+              duration,
+              status: 'success',
+              toolCount: result.tools.length 
+            });
+            
+            return result;
+          } catch (error) {
+            metricsCollector.recordMcpError('list_tools_error', 'LIST_TOOLS_FAILED', 'list_tools');
+            logError(error, 'mcp_list_tools');
+            throw error;
+          }
+        });
       });
 
       this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
         const startTime = Date.now();
         
-        logMCPOperation('call_tool', { name, args });
+        return runWithCorrelation({
+          correlationId: generateCorrelationId(),
+          traceId: generateTraceId()
+        }, async () => {
+          logMCPOperation('call_tool', { name, args }, { operationId: 'mcp_call_tool' });
 
-        try {
-          // Security validation
-          const context = await this.validateToolCall(name, args);
-          
-          const result = await this.toolManager.callTool(name, args, context);
-          
-          metricsCollector.recordMcpRequest('call_tool', name, 'success', (Date.now() - startTime) / 1000);
-          
-          return {
-            content: [
-              {
-                type: 'text',
-                text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
-              }
-            ]
-          };
-        } catch (error) {
-          logSecurityEvent('tool_call_failed', { name, error: (error as Error).message });
-          metricsCollector.recordMcpError('tool_call_error', 'TOOL_CALL_FAILED', 'call_tool');
-          throw error;
-        }
+          try {
+            // Security validation
+            const context = await this.validateToolCall(name, args);
+            
+            const result = await this.toolManager.callTool(name, args, context);
+            
+            const duration = (Date.now() - startTime) / 1000;
+            metricsCollector.recordMcpRequest('call_tool', name, 'success', duration);
+            
+            logMCPOperation('call_tool', { name, result }, { 
+              operationId: 'mcp_call_tool',
+              duration,
+              status: 'success',
+              toolName: name 
+            });
+            
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+                }
+              ]
+            };
+          } catch (error) {
+            logSecurityEvent('tool_call_failed', { name, error: (error as Error).message }, 'high');
+            metricsCollector.recordMcpError('tool_call_error', 'TOOL_CALL_FAILED', 'call_tool');
+            logError(error, 'mcp_call_tool', { toolName: name, args });
+            throw error;
+          }
+        });
       });
     }
 
@@ -101,47 +138,77 @@ export class MCPManusServer {
       this.server.setRequestHandler(ListResourcesRequestSchema, async () => {
         const startTime = Date.now();
         
-        try {
-          logMCPOperation('list_resources', {});
-          const result = {
-            resources: this.resourceManager.listResources()
-          };
-          
-          metricsCollector.recordMcpRequest('list_resources', 'resources', 'success', (Date.now() - startTime) / 1000);
-          return result;
-        } catch (error) {
-          metricsCollector.recordMcpError('list_resources_error', 'LIST_RESOURCES_FAILED', 'list_resources');
-          throw error;
-        }
+        return runWithCorrelation({
+          correlationId: generateCorrelationId(),
+          traceId: generateTraceId()
+        }, () => {
+          try {
+            logMCPOperation('list_resources', {}, { operationId: 'mcp_list_resources' });
+            const result = {
+              resources: this.resourceManager.listResources()
+            };
+            
+            const duration = (Date.now() - startTime) / 1000;
+            metricsCollector.recordMcpRequest('list_resources', 'resources', 'success', duration);
+            
+            logMCPOperation('list_resources', result, { 
+              operationId: 'mcp_list_resources',
+              duration,
+              status: 'success',
+              resourceCount: result.resources.length 
+            });
+            
+            return result;
+          } catch (error) {
+            metricsCollector.recordMcpError('list_resources_error', 'LIST_RESOURCES_FAILED', 'list_resources');
+            logError(error, 'mcp_list_resources');
+            throw error;
+          }
+        });
       });
 
       this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
         const { uri } = request.params;
         const startTime = Date.now();
         
-        logMCPOperation('read_resource', { uri });
+        return runWithCorrelation({
+          correlationId: generateCorrelationId(),
+          traceId: generateTraceId()
+        }, async () => {
+          logMCPOperation('read_resource', { uri }, { operationId: 'mcp_read_resource' });
 
-        try {
-          const context = await this.validateResourceAccess(uri);
-          const resource = await this.resourceManager.readResource(uri, context);
-          
-          metricsCollector.recordMcpRequest('read_resource', 'resource', 'success', (Date.now() - startTime) / 1000);
-          
-          return {
-            contents: [
-              {
-                uri,
-                mimeType: resource.mimeType || 'text/plain',
-                text: resource.text,
-                blob: resource.blob
-              }
-            ]
-          };
-        } catch (error) {
-          logSecurityEvent('resource_access_failed', { uri, error: (error as Error).message });
-          metricsCollector.recordMcpError('resource_access_error', 'RESOURCE_ACCESS_FAILED', 'read_resource');
-          throw error;
-        }
+          try {
+            const context = await this.validateResourceAccess(uri);
+            const resource = await this.resourceManager.readResource(uri, context);
+            
+            const duration = (Date.now() - startTime) / 1000;
+            metricsCollector.recordMcpRequest('read_resource', 'resource', 'success', duration);
+            
+            logMCPOperation('read_resource', { uri, resourceType: resource.mimeType }, { 
+              operationId: 'mcp_read_resource',
+              duration,
+              status: 'success',
+              uri,
+              mimeType: resource.mimeType 
+            });
+            
+            return {
+              contents: [
+                {
+                  uri,
+                  mimeType: resource.mimeType || 'text/plain',
+                  text: resource.text,
+                  blob: resource.blob
+                }
+              ]
+            };
+          } catch (error) {
+            logSecurityEvent('resource_access_failed', { uri, error: (error as Error).message }, 'high');
+            metricsCollector.recordMcpError('resource_access_error', 'RESOURCE_ACCESS_FAILED', 'read_resource');
+            logError(error, 'mcp_read_resource', { uri });
+            throw error;
+          }
+        });
       });
     }
   }
