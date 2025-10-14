@@ -14,18 +14,38 @@ A production-ready Model Context Protocol (MCP) server with Manus.im integration
 
 ## 🏗️ Architecture
 
-```text
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   MCP Client    │────│  Nginx Proxy    │────│  MCP Server     │
-│   (Claude, etc) │    │  Rate Limiting  │    │  Authentication │
-└─────────────────┘    │  Security Hdrs  │    │  Tool Manager   │
-                       └─────────────────┘    │  Resource Mgr   │
-                                             └─────────────────┘
-                                                       │
-                                             ┌─────────────────┐
-                                             │   Manus.im API  │
-                                             │   Integration   │
-                                             └─────────────────┘
+For a detailed explanation of the architecture, please see the [ARCHITECTURE.md](docs/ARCHITECTURE.md) file.
+
+```mermaid
+graph TD
+    subgraph "MCP Clients"
+        A[MCP Client 1]
+        B[MCP Client 2]
+        C[...]
+    end
+
+    subgraph "Network Layer"
+        D[Nginx Reverse Proxy]
+    end
+
+    subgraph "Application Layer"
+        E[MCP Server]
+    end
+
+    subgraph "Integration Layer"
+        F[Manus.im API]
+    end
+
+    A --> D
+    B --> D
+    C --> D
+
+    D -- HTTPS --> E
+
+    E -- REST API --> F
+
+    style D fill:#f9f,stroke:#333,stroke-width:2px
+    style E fill:#ccf,stroke:#333,stroke-width:2px
 ```
 
 ## 🛠️ Quick Start
@@ -41,15 +61,15 @@ A production-ready Model Context Protocol (MCP) server with Manus.im integration
 1. **Clone and install dependencies:**
 
    ```bash
-   git clone <your-repo>
-   cd mcp_manus
+   git clone https://github.com/gianlucamazza/mcp-manus-server.git
+   cd mcp-manus-server
    npm install
    ```
 
 2. **Configure environment:**
 
    ```bash
-   cp .env.example .env
+   cp config/development.env .env
    # Edit .env with your configuration
    ```
 
@@ -113,31 +133,23 @@ Add to your MCP client configuration:
 
 ## 🔒 Security
 
-This server implements comprehensive security measures following 2025 best practices:
-
-- **Container Security**: Non-root execution, read-only filesystem, capability restrictions
-- **Network Security**: Rate limiting, security headers, network isolation
-- **Authentication**: OAuth 2.1 with PKCE, JWT validation, resource indicators
-- **Authorization**: Tool/resource access controls, path validation, audit logging
-- **Input Validation**: Zod schema validation, sanitization, type safety
-
-See [docs/SECURITY.md](docs/SECURITY.md) for detailed security documentation.
+This server implements comprehensive security measures following 2025 best practices. See [docs/SECURITY.md](docs/SECURITY.md) for detailed security documentation.
 
 ## 🛡️ Available Tools
 
-| Tool                  | Description            | Input Schema        |
-| --------------------- | ---------------------- | ------------------- |
-| `get_system_info`     | System information     | `{}`                |
-| `echo`                | Echo input message     | `{message: string}` |
-| `check_manus_credits` | Check Manus.im credits | `{}`                |
+| Tool                  | Description            | Input Schema        | Output Schema       |
+| --------------------- | ---------------------- | ------------------- | ------------------- |
+| `get_system_info`     | System information     | `{}`                | `{os: string, version: string}` |
+| `echo`                | Echo input message     | `{message: string}` | `{response: string}`|
+| `check_manus_credits` | Check Manus.im credits | `{}`                | `{credits: number}` |
 
 ## 📊 Available Resources
 
-| Resource              | Description                 | Content Type       |
-| --------------------- | --------------------------- | ------------------ |
-| `mcp://system/status` | System status and health    | `application/json` |
-| `mcp://config/server` | Server configuration        | `application/json` |
-| `mcp://manus/status`  | Manus.im integration status | `application/json` |
+| Resource              | Description                 | Content Type       | Example Usage (CLI) |
+| --------------------- | --------------------------- | ------------------ | ------------------- |
+| `mcp://system/status` | System status and health    | `application/json` | `manus-mcp-cli resource get mcp://system/status` |
+| `mcp://config/server` | Server configuration        | `application/json` | `manus-mcp-cli resource get mcp://config/server` |
+| `mcp://manus/status`  | Manus.im integration status | `application/json` | `manus-mcp-cli resource get mcp://manus/status` |
 
 ## 🧪 Testing
 
@@ -161,104 +173,15 @@ npm run lint
 
 ## 📈 Monitoring & Observability
 
-### Logging
-
-Structured JSON logging with configurable levels:
-
-```javascript
-// Application logs
-{
-  "timestamp": "2025-01-01T00:00:00.000Z",
-  "level": "info",
-  "message": "MCP Operation",
-  "operation": "call_tool",
-  "data": {...}
-}
-
-// Security logs
-{
-  "timestamp": "2025-01-01T00:00:00.000Z",
-  "level": "warn",
-  "message": "Security Event",
-  "event": "rate_limit_exceeded",
-  "severity": "high"
-}
-```
-
-### Health Checks
-
-- **Application Health**: `/health` endpoint
-- **Docker Health**: Built-in container health checks
-- **Process Monitoring**: Memory usage and process validation
-
-### Metrics
-
-- Request/response times
-- Error rates and types
-- Resource utilization
-- Security event counts
-
-## 🔄 Manus.im Integration
-
-### Current Status
-
-The Manus.im integration is **ready for deployment** but currently operates with mock data since the API is in private beta.
-
-### Features Ready
-
-- ✅ Credit tracking and management
-- ✅ Task creation and execution
-- ✅ Multimodal support (text, image, code, file, web)
-- ✅ Real-time task status monitoring
-- ✅ Error handling and retry logic
-
-### Integration Examples
-
-```typescript
-// Check credits
-const credits = await manusIntegration.checkCredits();
-
-// Execute text task
-const result = await manusIntegration.executeTextTask("Analyze this data...");
-
-// Execute code task
-const output = await manusIntegration.executeCodeTask("console.log('Hello')", "javascript");
-```
+This project is configured with a complete monitoring stack based on Prometheus, Grafana, and Alertmanager. For more details, see the [monitoring/README.md](monitoring/README.md) file.
 
 ## 🚢 Deployment
 
-### Production Deployment Checklist
-
-- [ ] Configure environment variables securely
-- [ ] Set up SSL/TLS certificates
-- [ ] Configure proper firewall rules
-- [ ] Set up log aggregation and monitoring
-- [ ] Configure automated backups
-- [ ] Test disaster recovery procedures
-- [ ] Set up security scanning and updates
-
-### Scaling Considerations
-
-- **Horizontal Scaling**: Deploy multiple instances behind load balancer
-- **Resource Limits**: Configure CPU/memory limits based on usage
-- **Rate Limiting**: Adjust rate limits based on expected load
-- **Caching**: Implement Redis for session/token caching if needed
+See the [ARCHITECTURE.md](docs/ARCHITECTURE.md) for deployment and scaling considerations.
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript strict mode
-- Add tests for new features
-- Update documentation
-- Follow security best practices
-- Use conventional commit messages
+Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) to get started. Also, please read our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for our community standards.
 
 ## 📄 License
 
@@ -266,17 +189,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🆘 Support
 
-- **Documentation**: See `docs/` directory
-- **Issues**: [GitHub Issues](https://github.com/your-org/mcp_manus/issues)
-- **Security**: See [docs/SECURITY.md](docs/SECURITY.md) for security reporting
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/mcp_manus/discussions)
+- **Issues**: [GitHub Issues](https://github.com/gianlucamazza/mcp-manus-server/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/gianlucamazza/mcp-manus-server/discussions)
 
-## 🏷️ Version History
-
-- **v1.0.0** - Initial release with MCP 2025 compliance
-  - OAuth 2.1 authentication
-  - Docker containerization
-  - Manus.im integration ready
-  - Comprehensive security implementation
-
----
