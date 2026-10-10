@@ -1,16 +1,18 @@
 # MCP Manus Server
 
-A production-ready Model Context Protocol (MCP) server with Manus.im integration, built following 2025 best practices for security, containerization, and scalability.
+**Status: experimental. Tools currently return mock data; no live Manus.im API calls.**
+
+A Model Context Protocol (MCP) server with Manus.im integration scaffolding, including security, containerization, and observability setup.
 
 ## 🚀 Features
 
 - **MCP Compliance**: Implements the latest Model Context Protocol specification (2025-06-18)
-- **Manus.im Integration**: Ready for Manus.im API integration with credit management and task execution
+- **Manus.im Integration**: Placeholder MCP tools and an unused HTTP client; no live Manus.im API calls
 - **OAuth 2.1 Security**: Modern authentication with PKCE and resource indicators
 - **Docker Security**: Multi-stage builds, non-root execution, and security hardening
 - **TypeScript**: Full type safety with modern ES modules and Node.js 20+
 - **Comprehensive Testing**: Unit, integration, and schema validation tests
-- **Production Monitoring**: Structured logging, health checks, and audit trails
+- **Monitoring**: Structured logging, health checks, and audit trails
 
 ## 🏗️ Architecture
 
@@ -202,17 +204,19 @@ Structured JSON logging with configurable levels:
 
 ### Current Status
 
-The Manus.im integration is **ready for deployment** but currently operates with mock data since the API is in private beta.
+**Status: experimental. Tools currently return mock data; no live Manus.im API calls.**
 
-### Features Ready
+The MCP tool `check_manus_credits` in `src/tools/manager.ts` always returns hardcoded mock credits and does not call Manus.im. `ManusIntegration` in `src/integrations/manus.ts` includes an axios client that would request `https://api.manus.run` (or `MANUS_API_URL`) when `MANUS_API_KEY` is set, but that class is not imported or used by the running server.
 
-- ✅ Credit tracking and management
-- ✅ Task creation and execution
-- ✅ Multimodal support (text, image, code, file, web)
-- ✅ Real-time task status monitoring
-- ✅ Error handling and retry logic
+### Scaffolding (not live)
+
+- Mock credit response from `check_manus_credits` (hardcoded; never hits Manus.im)
+- Unused `ManusIntegration` methods for credits, tasks, and polling (live HTTP only if the class is instantiated with an API key)
+- `mcp://manus/status` resource returns a hardcoded `pending_api_access` payload
 
 ### Integration Examples
+
+The examples below call `ManusIntegration` directly. The MCP server does not use this class today.
 
 ```typescript
 // Check credits
@@ -276,7 +280,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **v1.0.0** - Initial release with MCP 2025 compliance
   - OAuth 2.1 authentication
   - Docker containerization
-  - Manus.im integration ready
+  - Manus.im integration scaffolding (tools return mock data)
   - Comprehensive security implementation
 
 ---

@@ -353,4 +353,4 @@ node --inspect src/index.js
 - **Team training**: Performance testing best practices
 - **Monitoring integration**: Production performance tracking
 
-This comprehensive performance testing framework ensures the MCP Manus Server maintains optimal performance under various load conditions and scales effectively for enterprise deployment.
+This performance testing framework exercises the MCP Manus Server under various load conditions.

@@ -1,6 +1,6 @@
 # MCP Manus Server - Comprehensive Logging System
 
-This directory contains the enterprise-grade logging infrastructure for the MCP Manus Server, implementing 2025 best practices for structured logging, correlation IDs, and log aggregation.
+This directory contains the logging infrastructure for the MCP Manus Server, including structured logging, correlation IDs, and log aggregation.
 
 ## 🎯 Overview
 

@@ -433,4 +433,4 @@ kubectl logs -f deployment/mcp-manus-server -n mcp-manus --all-containers=true
 - **Audit logging**: Complete audit trail
 - **Vulnerability scanning**: Regular container scanning
 
-This Kubernetes deployment provides enterprise-grade orchestration for the MCP Manus Server with high availability, security, and observability built-in.
+This Kubernetes deployment provides orchestration for the MCP Manus Server with high availability, security, and observability configuration.

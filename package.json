@@ -1,7 +1,7 @@
 {
   "name": "mcp-manus-server",
   "version": "1.0.0",
-  "description": "MCP Server with Manus.im integration following 2025 best practices",
+  "description": "Experimental MCP server with Manus.im integration (tools currently return mock data)",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

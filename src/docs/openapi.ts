@@ -10,15 +10,15 @@ export const openApiConfig = {
       description: `
         # MCP Manus Server API
 
-        Production-ready Model Context Protocol (MCP) server with Manus.im integration, 
-        built following 2025 best practices for security, containerization, and scalability.
+        Experimental Model Context Protocol (MCP) server with Manus.im integration scaffolding.
+        Tools currently return mock data; no live Manus.im API calls.
 
         ## Features
 
         - **MCP Compliance**: Latest Model Context Protocol specification (2025-06-18)
         - **OAuth 2.1 Security**: Modern authentication with PKCE and resource indicators
-        - **Manus.im Integration**: Ready for Manus.im API integration with credit management
-        - **Enterprise Monitoring**: Prometheus metrics, health checks, and audit trails
+        - **Manus.im Integration**: Placeholder tools; no live Manus.im API calls
+        - **Monitoring**: Prometheus metrics, health checks, and audit trails
         - **Container Security**: Multi-stage builds, non-root execution, security hardening
 
         ## Authentication
