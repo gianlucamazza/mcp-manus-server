@@ -1,10 +1,10 @@
-# MCP Manus Server - Comprehensive Logging System
+# MCP Manus Server - Logging files
 
-This directory contains the logging infrastructure for the MCP Manus Server, including structured logging, correlation IDs, and log aggregation.
+This directory contains Fluent Bit / Elasticsearch-oriented logging files for the MCP Manus Server (structured logging, correlation IDs, aggregation configs). They have not been verified against a running server; install, lint, test, and build currently fail on `main`.
 
 ## 🎯 Overview
 
-The logging system provides:
+The files describe:
 - **Correlation ID tracking** across all components
 - **Structured JSON logging** with consistent schema
 - **Log aggregation** with Elasticsearch/Kibana stack
@@ -391,7 +391,7 @@ docker logs mcp-fluent-bit --tail 100
 echo '{"test": "message"}' | docker exec -i mcp-fluent-bit fluent-bit -i stdin -o stdout -p format=json_lines
 ```
 
-## 🚀 Production Deployment
+## 🚀 Scaling notes (unverified)
 
 ### Scaling
 - **Multiple Fluent Bit instances** for high availability
@@ -406,4 +406,4 @@ echo '{"test": "message"}' | docker exec -i mcp-fluent-bit fluent-bit -i stdin -
 - **Set up backup strategies** for critical logs
 - **Implement log forwarding** to SIEM systems
 
-This comprehensive logging system ensures full observability and traceability for the MCP Manus Server in production environments.
+These files are a logging starting point. They do not make the server production-ready or guarantee observability; the application does not currently install or build on `main`.

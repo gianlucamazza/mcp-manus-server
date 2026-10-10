@@ -12,6 +12,7 @@ export const openApiConfig = {
 
         Experimental Model Context Protocol (MCP) server with Manus.im integration scaffolding.
         Tools currently return mock data; no live Manus.im API calls.
+        Install, lint, test, and build currently fail on main; this project is not deployable as-is.
 
         ## Features
 

@@ -1,18 +1,18 @@
 # MCP Manus Server
 
-**Status: experimental. Tools currently return mock data; no live Manus.im API calls.**
+**Status: experimental. Tools currently return mock data; no live Manus.im API calls. Install (`npm ci` / `npm install`), lint, test, and build currently fail on `main`; this project is not deployable as-is.**
 
-A Model Context Protocol (MCP) server with Manus.im integration scaffolding, including security, containerization, and observability setup.
+A Model Context Protocol (MCP) server with Manus.im integration scaffolding. Security, container, and observability files exist in the repo; they have not been verified by a working install or build.
 
 ## 🚀 Features
 
-- **MCP Compliance**: Implements the latest Model Context Protocol specification (2025-06-18)
+- **MCP protocol scaffolding**: Server code aims at the Model Context Protocol specification (2025-06-18); compliance is unverified because the project does not currently build
 - **Manus.im Integration**: Placeholder MCP tools and an unused HTTP client; no live Manus.im API calls
-- **OAuth 2.1 Security**: Modern authentication with PKCE and resource indicators
-- **Docker Security**: Multi-stage builds, non-root execution, and security hardening
-- **TypeScript**: Full type safety with modern ES modules and Node.js 20+
-- **Comprehensive Testing**: Unit, integration, and schema validation tests
-- **Monitoring**: Structured logging, health checks, and audit trails
+- **OAuth 2.1 scaffolding**: PKCE and resource-indicator code is present; the auth flow currently returns mock tokens
+- **Docker files**: Multi-stage Dockerfile and Compose files are present; images have not been verified on a working build
+- **TypeScript**: Source is TypeScript targeting Node.js 20+; `npm run build` currently fails
+- **Tests**: Unit, integration, and schema test files exist; `npm test` currently fails (Jest ESM config)
+- **Observability files**: Logger, health-check, and Prometheus-related source exist; the stack is not verified as running
 
 ## 🏗️ Architecture
 
@@ -32,6 +32,8 @@ A Model Context Protocol (MCP) server with Manus.im integration scaffolding, inc
 
 ## 🛠️ Quick Start
 
+These commands are the intended local workflow. On `main` they do not succeed: `npm install` fails on unpublished packages (`k6@^0.47.0`, `opentelemetry-auto@^0.32.0`), and there is no `package-lock.json` for `npm ci`.
+
 ### Prerequisites
 
 - Node.js 20+
@@ -40,7 +42,7 @@ A Model Context Protocol (MCP) server with Manus.im integration scaffolding, inc
 
 ### Development Setup
 
-1. **Clone and install dependencies:**
+1. **Clone and install dependencies (currently fails on `main`):**
 
    ```bash
    git clone <your-repo>
@@ -61,9 +63,11 @@ A Model Context Protocol (MCP) server with Manus.im integration scaffolding, inc
    npm run dev
    ```
 
-### Docker Deployment
+### Docker (unverified)
 
-1. **Build and run with Docker Compose:**
+Compose files live under `docker/`. They have not been verified; the TypeScript build used by the image currently fails, so this is not a working one-command deploy.
+
+1. **Intended Compose command:**
 
    ```bash
    docker-compose -f docker/docker-compose.yml up -d
@@ -115,13 +119,13 @@ Add to your MCP client configuration:
 
 ## 🔒 Security
 
-This server implements comprehensive security measures following 2025 best practices:
+Security-related code and docs are present. They have not been validated by a passing build, test suite, or deploy:
 
-- **Container Security**: Non-root execution, read-only filesystem, capability restrictions
-- **Network Security**: Rate limiting, security headers, network isolation
-- **Authentication**: OAuth 2.1 with PKCE, JWT validation, resource indicators
-- **Authorization**: Tool/resource access controls, path validation, audit logging
-- **Input Validation**: Zod schema validation, sanitization, type safety
+- **Container files**: Non-root user, read-only filesystem options, and capability restrictions appear in Docker/K8s files
+- **Network-related code**: Rate limiting and security-header plugins are wired in source
+- **Authentication code**: OAuth 2.1 with PKCE and JWT validation (demo/mock token paths remain)
+- **Authorization code**: Tool/resource access controls and path validation
+- **Input validation**: Zod schemas in tool handlers
 
 See [docs/SECURITY.md](docs/SECURITY.md) for detailed security documentation.
 
@@ -143,21 +147,15 @@ See [docs/SECURITY.md](docs/SECURITY.md) for detailed security documentation.
 
 ## 🧪 Testing
 
+Test files exist under `tests/`. On `main`, `npm test` fails (Jest ESM / `moduleNameMapping` config), `npm run lint` fails (missing ESLint shareable config), and `npm run build` / `tsc` fail with existing TypeScript errors. There is no measured coverage percentage.
+
 ```bash
-# Run all tests
+# Intended commands (currently fail on main)
 npm test
-
-# Run tests with coverage
 npm run test:coverage
-
-# Run specific test suites
 npm run test:unit
 npm run test:integration
-
-# Type checking
 npm run typecheck
-
-# Linting
 npm run lint
 ```
 
@@ -204,7 +202,7 @@ Structured JSON logging with configurable levels:
 
 ### Current Status
 
-**Status: experimental. Tools currently return mock data; no live Manus.im API calls.**
+**Status: experimental. Tools currently return mock data; no live Manus.im API calls. Install, lint, test, and build currently fail on `main`; this project is not deployable as-is.**
 
 The MCP tool `check_manus_credits` in `src/tools/manager.ts` always returns hardcoded mock credits and does not call Manus.im. `ManusIntegration` in `src/integrations/manus.ts` includes an axios client that would request `https://api.manus.run` (or `MANUS_API_URL`) when `MANUS_API_KEY` is set, but that class is not imported or used by the running server.
 
@@ -231,22 +229,20 @@ const output = await manusIntegration.executeCodeTask("console.log('Hello')", "j
 
 ## 🚢 Deployment
 
-### Production Deployment Checklist
+Not deployable as-is: install, lint, test, and build currently fail on `main`. The items below are a future checklist, not a working production path.
 
+### Future deployment checklist
+
+- [ ] Restore a working `npm install` / `npm ci`
+- [ ] Fix lint, tests, and `tsc` so the project builds
 - [ ] Configure environment variables securely
 - [ ] Set up SSL/TLS certificates
-- [ ] Configure proper firewall rules
 - [ ] Set up log aggregation and monitoring
-- [ ] Configure automated backups
-- [ ] Test disaster recovery procedures
 - [ ] Set up security scanning and updates
 
-### Scaling Considerations
+### Scaling notes (not measured)
 
-- **Horizontal Scaling**: Deploy multiple instances behind load balancer
-- **Resource Limits**: Configure CPU/memory limits based on usage
-- **Rate Limiting**: Adjust rate limits based on expected load
-- **Caching**: Implement Redis for session/token caching if needed
+Kubernetes HPA and resource-limit manifests exist under `k8s/`. No load, latency, or capacity numbers have been measured.
 
 ## 🤝 Contributing
 
@@ -277,10 +273,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🏷️ Version History
 
-- **v1.0.0** - Initial release with MCP 2025 compliance
-  - OAuth 2.1 authentication
-  - Docker containerization
+- **v1.0.0** - Initial experimental release
+  - OAuth 2.1 scaffolding (mock token paths remain)
+  - Docker and Kubernetes files (unverified; project does not currently build)
   - Manus.im integration scaffolding (tools return mock data)
-  - Comprehensive security implementation
+  - Security-related source and docs (not validated by a passing test/build)
 
 ---

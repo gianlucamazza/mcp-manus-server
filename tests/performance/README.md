@@ -1,15 +1,14 @@
 # MCP Manus Server - Performance Testing
 
-This directory contains comprehensive performance testing infrastructure for the MCP Manus Server, implementing 2025 best practices for load testing, performance validation, and SLA monitoring.
+This directory contains k6 and Artillery scripts. **No load, latency, throughput, or availability numbers in this repo have been measured.** `k6@^0.47.0` is unpublished on npm, `npm install` fails on `main`, and the application does not currently build, so these scripts have not been shown to run against this project.
 
 ## 🎯 Overview
 
-The performance testing suite includes:
-- **Load Testing**: k6 and Artillery.js configurations
-- **Performance Baselines**: SLA definitions and thresholds
-- **Stress Testing**: Peak load and breaking point analysis
-- **Monitoring Integration**: Real-time performance tracking
-- **CI/CD Integration**: Automated performance regression testing
+Files here include:
+- **Load-test scripts**: k6 and Artillery.js configurations
+- **Draft thresholds**: numbers copied into the scripts (not measured baselines)
+- **Stress/soak command examples**: intended usage, not recorded results
+- **Monitoring / CI examples**: suggested wiring, not a working automated gate
 
 ## 🏗️ Testing Architecture
 
@@ -68,16 +67,16 @@ artillery quick --count 10 --num 100 http://localhost:3000/health
 artillery run -t https://mcp-manus.example.com tests/performance/artillery-config.yml
 ```
 
-## 📊 Performance Baselines & SLOs
+## 📊 Draft script thresholds (not measured)
 
-### Service Level Objectives (SLOs)
+The values below are copied from `load-test.js` / `artillery-config.yml`. They are **not** verified SLOs, baselines, or benchmark results.
 
-| Metric | Target | Measurement |
-|--------|--------|-------------|
-| **Availability** | 99.9% | HTTP 2xx responses |
-| **Response Time** | p95 < 500ms | HTTP request duration |
-| **Error Rate** | < 1% | HTTP 5xx responses |
-| **Throughput** | > 100 req/s | Sustained load capacity |
+| Metric | Number in scripts | Notes |
+|--------|-------------------|-------|
+| Availability | 99.9% | Script/alert target only |
+| Response time | p95 < 500ms | Script threshold only |
+| Error rate | < 1% | Script threshold only |
+| Throughput | > 100 req/s | Script threshold only |
 
 ### Performance Thresholds
 
@@ -103,7 +102,7 @@ ensure:
 
 ### 1. Health Check Load (40% traffic)
 - **Endpoint**: `GET /health`
-- **Expected**: 200 status, < 100ms response
+- **Scripted expectation**: 200 status (latency target in scripts is unverified)
 - **Purpose**: Kubernetes liveness probe simulation
 
 ### 2. Readiness Check Load (20% traffic)
@@ -246,10 +245,10 @@ node scripts/compare-performance.js baseline.json current.json
     summary: "Request throughput below baseline"
 ```
 
-### CI/CD Integration
+### CI/CD example (not a working gate)
 
 ```yaml
-# GitHub Actions performance gate
+# Example only — k6 is not installable from this package.json, and the app does not build
 - name: Performance Testing
   run: |
     npm start &
@@ -339,18 +338,8 @@ node --inspect src/index.js
 - **Network**: Connection keep-alive optimization
 - **Storage**: Efficient log handling
 
-## 📈 Continuous Performance Testing
+## 📈 Continuous testing (not implemented)
 
-### Automated Testing
-- **Nightly performance tests**: Regression detection
-- **Release validation**: Performance gate in CI/CD
-- **Load testing schedule**: Weekly stress tests
-- **Performance trending**: Long-term analysis
+There is no measured nightly suite, CI performance gate, or trending dashboard for this repo. The scripts above are unused until install and build work.
 
-### Performance Culture
-- **Performance budgets**: Resource allocation limits
-- **Performance reviews**: Regular performance analysis
-- **Team training**: Performance testing best practices
-- **Monitoring integration**: Production performance tracking
-
-This performance testing framework exercises the MCP Manus Server under various load conditions.
+These scripts are a starting point for load testing. They have not been run successfully against this repo on `main`, and the numbers above are not measured results.
