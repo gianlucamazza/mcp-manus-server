@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the security architecture, best practices, and guidelines implemented in the MCP Manus Server following 2025 industry standards and Model Context Protocol security recommendations.
+This document describes security-related files and intended practices for the MCP Manus Server. They have not been validated by a passing install, lint, test, or build on `main`.
 
 ## Security Architecture
 

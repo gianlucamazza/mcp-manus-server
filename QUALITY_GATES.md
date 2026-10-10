@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-The MCP Manus Server implements comprehensive quality gates following 2025 best practices to ensure code quality, security, and consistency throughout the development lifecycle.
+This document describes intended quality-gate tooling. On `main`, `npm ci` / `npm install`, lint, test, and build currently fail, so these gates are not enforced and no coverage or performance numbers have been measured.
 
 ## 🏗️ Quality Gate Architecture
 
@@ -157,10 +157,8 @@ refactor(mcp): extract common server utilities
 
 ### Testing Standards
 
-#### Coverage Requirements
-- **Minimum**: 80% overall coverage
-- **Critical paths**: 90% coverage required
-- **New code**: 95% coverage required
+#### Coverage (stated targets only; not measured)
+`jest.config.js` lists a 70% global threshold. There is no recorded coverage report, and `npm test` currently fails, so no 80% / 90% / 95% figure is backed by a run.
 
 #### Test Categories
 1. **Unit Tests**: Individual function/class testing
@@ -190,16 +188,11 @@ detect-secrets scan --all-files
 
 ### Performance Standards
 
-#### Build Performance
-- **TypeScript compilation**: < 30 seconds
-- **Test execution**: < 2 minutes  
-- **Bundle size**: < 5MB
-- **Container build**: < 5 minutes
+#### Build / runtime numbers (unverified)
+The following figures appear as goals in this doc only. They have not been measured; `npm run build` and `npm test` currently fail:
 
-#### Runtime Performance
-- **Startup time**: < 5 seconds
-- **Memory usage**: < 512MB baseline
-- **API response time**: < 100ms p95
+- TypeScript compilation, test duration, bundle size, container build time
+- Startup time, memory baseline, API p95 latency
 
 ## 🚀 Usage Guide
 
@@ -450,4 +443,4 @@ npm run security:deps
 - **Documentation**: Keep quality guides updated
 - **Knowledge sharing**: Share quality insights across teams
 
-This comprehensive quality gate system ensures that the MCP Manus Server maintains the highest standards of code quality, security, and maintainability throughout its development lifecycle.
+This document describes intended gates. They do not currently pass on `main`.

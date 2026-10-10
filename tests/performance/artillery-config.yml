@@ -1,5 +1,5 @@
 # Artillery.js Performance Testing Configuration
-# MCP Manus Server - Enterprise Load Testing
+# MCP Manus Server - Load Testing
 
 config:
   target: 'http://localhost:3000'

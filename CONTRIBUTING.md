@@ -33,7 +33,7 @@ This project adheres to a code of conduct that we expect all contributors to fol
    cd mcp-manus-server
    ```
 
-2. **Install dependencies:**
+2. **Install dependencies (currently fails on `main`; see README status):**
    ```bash
    npm install
    ```
@@ -148,7 +148,7 @@ This project adheres to a code of conduct that we expect all contributors to fol
 1. **Unit Tests** (`tests/unit/`)
    - Test individual functions and classes
    - Use Jest framework
-   - Aim for >90% coverage
+   - Add tests where practical (coverage is not currently measured; `npm test` fails on `main`)
 
 2. **Integration Tests** (`tests/integration/`)
    - Test component interactions
@@ -185,7 +185,7 @@ describe('Feature', () => {
 
 ### Test Coverage
 
-- Maintain >90% code coverage
+- Add tests for new behavior (no coverage % is currently measured)
 - Test error conditions
 - Test edge cases
 - Test security scenarios

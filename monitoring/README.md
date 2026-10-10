@@ -1,6 +1,6 @@
 # MCP Manus Server Monitoring
 
-This directory contains the complete monitoring stack for the MCP Manus Server, implementing 2025 best practices for observability.
+This directory contains Prometheus, Grafana, and Alertmanager files for the MCP Manus Server. The stack has not been verified against a running server: install, lint, test, and build currently fail on `main`, so monitoring is not a working included product.
 
 ## Overview
 
@@ -27,9 +27,11 @@ The monitoring solution includes:
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## Quick Start
+## Example Compose commands (unverified)
 
-1. **Start the monitoring stack:**
+These assume a running MCP server that currently does not build on `main`.
+
+1. **Intended start command:**
    ```bash
    cd monitoring
    docker-compose up -d
@@ -64,10 +66,8 @@ The monitoring solution includes:
 - Token exchange rates
 - Error tracking by type
 
-### Manus.im API Metrics
-- API request rates and latency
-- Error rates by endpoint
-- Response time tracking
+### Manus.im API metric names (unused live path)
+Metric names exist for API request rates and latency. The running server does not call Manus.im, so these series would not reflect live API traffic.
 
 ### System Metrics
 - Memory and CPU usage
@@ -82,6 +82,8 @@ The monitoring solution includes:
 - Security policy violations
 
 ## Alerts
+
+Thresholds below are copied from `prometheus/alert_rules.yml`. They are rule settings, not measured SLOs.
 
 ### Critical Alerts
 - Service down (> 1 minute)
@@ -194,7 +196,7 @@ metricsCollector.recordManusApiRequest('/api/endpoint', 'GET', 200, 0.2);
 Separate configurations for:
 - **Development**: Full local stack
 - **Staging**: Reduced retention, basic alerts
-- **Production**: Full monitoring, comprehensive alerts
+- **Production**: intended full stack (unverified; project is not deployable as-is)
 
 ## Troubleshooting
 
@@ -290,11 +292,11 @@ Critical components to backup:
 
 ### CI/CD Integration
 
-The monitoring stack integrates with:
-- GitHub Actions for deployment
-- Docker for containerization
-- Kubernetes for orchestration
-- External log aggregation
+Files in this repo can be pointed at:
+- GitHub Actions (workflows exist; they have not been shown to deploy this stack)
+- Docker Compose
+- Kubernetes ServiceMonitor manifests
+- External log aggregation (not configured as a working default)
 
 ### External Services
 

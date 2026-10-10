@@ -1,6 +1,6 @@
-# MCP Manus Server - Kubernetes Deployment
+# MCP Manus Server - Kubernetes manifests
 
-This directory contains comprehensive Kubernetes manifests for deploying the MCP Manus Server following 2025 best practices for container orchestration, security, and scalability.
+This directory contains Kubernetes manifests for the MCP Manus Server. They have not been applied or verified against a working build; install, lint, test, and build currently fail on `main`, so this is not a deploy-ready setup.
 
 ## 🏗️ Architecture Overview
 
@@ -31,9 +31,9 @@ This directory contains comprehensive Kubernetes manifests for deploying the MCP
 | `rbac.yaml` | RBAC permissions | Security policies |
 | `network-policy.yaml` | Network security | Traffic restrictions |
 | `servicemonitor.yaml` | Prometheus monitoring | Metrics collection |
-| `pdb.yaml` | Pod Disruption Budget | Availability guarantees |
+| `pdb.yaml` | Pod Disruption Budget | Disruption-budget settings |
 
-## 🚀 Quick Deployment
+## 🚀 Example apply commands (unverified)
 
 ### Prerequisites
 
@@ -74,10 +74,10 @@ kubectl apply -f ingress.yaml
 kubectl get all -n mcp-manus -l environment=staging
 ```
 
-### 3. Production Deployment
+### 3. Production-style apply example
 
 ```bash
-# Complete production deployment
+# Apply every manifest in this directory (unverified)
 kubectl apply -f .
 
 # Verify all components
@@ -148,10 +148,10 @@ spec:
 
 ### Prometheus Integration
 
-The deployment includes:
-- **ServiceMonitor**: Automatic metrics discovery
-- **PrometheusRule**: Custom alerting rules
-- **SLO monitoring**: Availability and response time tracking
+The manifests include:
+- **ServiceMonitor**: Prometheus scrape configuration
+- **PrometheusRule**: Alerting rule definitions
+- **SLO-style alert rules**: Availability and latency *targets in YAML* (not measured results)
 
 ### Health Checks
 
@@ -171,9 +171,9 @@ Kubernetes logging integration:
 
 ### Horizontal Pod Autoscaler
 
-**Production Scaling**:
-- **Min replicas**: 3 (high availability)
-- **Max replicas**: 10 (burst capacity)
+**Production HPA values in `hpa.yaml`** (manifest settings, not measured capacity):
+- **Min replicas**: 3
+- **Max replicas**: 10
 - **CPU target**: 70% utilization
 - **Memory target**: 80% utilization
 - **Custom metrics**: Request rate, connection count
@@ -222,7 +222,7 @@ resources:
 - **Pod read**: Self-discovery
 - **Event create**: Audit logging
 
-## 🚀 Production Deployment Guide
+## 🚀 Apply guide (unverified; not deployable as-is)
 
 ### 1. Pre-deployment Checklist
 
@@ -433,4 +433,4 @@ kubectl logs -f deployment/mcp-manus-server -n mcp-manus --all-containers=true
 - **Audit logging**: Complete audit trail
 - **Vulnerability scanning**: Regular container scanning
 
-This Kubernetes deployment provides enterprise-grade orchestration for the MCP Manus Server with high availability, security, and observability built-in.
+These manifests are a starting point for orchestration. They have not been verified on a cluster, and the application does not currently build or install on `main`.
